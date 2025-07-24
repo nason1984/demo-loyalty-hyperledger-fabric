@@ -1,0 +1,25 @@
+PeerOrgs:
+  - Name: BankOrg
+    Domain: bank.loyalty.com
+    EnableNodeOUs: true
+    Template:
+      Count: 2
+      SANS:
+        - "localhost"
+        - "peer0.bank.loyalty.com"
+        - "peer1.bank.loyalty.com"
+    Users:
+      Count: 1
+      SANS:
+        - "localhost"
+        - "Admin@bank.loyalty.com"
+
+OrdererOrgs:
+  - Name: Orderer
+    Domain: loyalty.com
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer
+        SANS:
+          - "localhost"
+          - "orderer.loyalty.com"

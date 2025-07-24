@@ -1,0 +1,200 @@
+version: '3.7'
+
+networks:
+  loyalty-cryptogen:
+    name: loyalty-cryptogen
+
+services:
+  orderer.loyalty.com:
+    container_name: orderer.loyalty.com
+    image: hyperledger/fabric-orderer:2.5.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_BOOTSTRAPMETHOD=file
+      - ORDERER_GENERAL_BOOTSTRAPFILE=/var/hyperledger/orderer/orderer.genesis.block
+      - ORDERER_CHANNELPARTICIPATION_ENABLED=true
+      - ORDERER_ADMIN_TLS_ENABLED=true
+      - ORDERER_ADMIN_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_ADMIN_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_ADMIN_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_TLS_CLIENTROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:7053
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    command: orderer
+    volumes:
+      - ../network/system-genesis-block/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+      - ../network/organizations/ordererOrganizations/loyalty.com/orderers/orderer.loyalty.com/msp:/var/hyperledger/orderer/msp
+      - ../network/organizations/ordererOrganizations/loyalty.com/orderers/orderer.loyalty.com/tls:/var/hyperledger/orderer/tls
+      - orderer.loyalty.com:/var/hyperledger/production/orderer
+    ports:
+      - 7050:7050
+      - 7053:7053
+    networks:
+      - loyalty-cryptogen
+
+  peer0.bank.loyalty.com:
+    container_name: peer0.bank.loyalty.com
+    image: hyperledger/fabric-peer:2.5.5
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=loyalty-cryptogen
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_ID=peer0.bank.loyalty.com
+      - CORE_PEER_ADDRESS=peer0.bank.loyalty.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.bank.loyalty.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.bank.loyalty.com:8051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.bank.loyalty.com:7051
+      - CORE_PEER_LOCALMSPID=BankOrgMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+      - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9444
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    volumes:
+      - /var/run/:/host/var/run/
+      - ./../loyalty-chaincode:/opt/gopath/src/github.com/hyperledger/fabric-peer/loyalty-chaincode
+      - ../network/organizations/peerOrganizations/bank.loyalty.com/peers/peer0.bank.loyalty.com:/etc/hyperledger/fabric
+      - peer0.bank.loyalty.com:/var/hyperledger/production
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    ports:
+      - "7051:7051"
+      - "9444:9444"
+    depends_on:
+      couchdb0:
+        condition: service_healthy
+    networks:
+      - loyalty-cryptogen
+
+  peer1.bank.loyalty.com:
+    container_name: peer1.bank.loyalty.com
+    image: hyperledger/fabric-peer:2.5.5
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=loyalty-cryptogen
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_ID=peer1.bank.loyalty.com
+      - CORE_PEER_ADDRESS=peer1.bank.loyalty.com:8051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:8051
+      - CORE_PEER_CHAINCODEADDRESS=peer1.bank.loyalty.com:8052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:8052
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.bank.loyalty.com:8051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.bank.loyalty.com:7051
+      - CORE_PEER_LOCALMSPID=BankOrgMSP
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+      - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9445
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb1:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    volumes:
+      - /var/run/:/host/var/run/
+      - ./../loyalty-chaincode:/opt/gopath/src/github.com/hyperledger/fabric-peer/loyalty-chaincode
+      - ../network/organizations/peerOrganizations/bank.loyalty.com/peers/peer1.bank.loyalty.com:/etc/hyperledger/fabric
+      - peer1.bank.loyalty.com:/var/hyperledger/production
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    ports:
+      - "8051:8051"
+      - "9445:9445"
+    depends_on:
+      couchdb1:
+        condition: service_healthy
+    networks:
+      - loyalty-cryptogen
+
+  couchdb0:
+    container_name: couchdb0
+    image: couchdb:3.3.2
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - "5984:5984"
+    networks:
+      - loyalty-cryptogen
+    volumes:
+      - couchdb0-data:/opt/couchdb/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://admin:adminpw@localhost:5984/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  couchdb1:
+    container_name: couchdb1
+    image: couchdb:3.3.2
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - "7984:5984"
+    networks:
+      - loyalty-cryptogen
+    volumes:
+      - couchdb1-data:/opt/couchdb/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://admin:adminpw@localhost:5984/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  cli:
+    container_name: cli
+    image: hyperledger/fabric-tools:2.5.5
+    labels:
+      service: hyperledger-fabric
+    tty: true
+    stdin_open: true
+    environment:
+      - GOPATH=/opt/gopath
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=cli
+      - CORE_PEER_ADDRESS=peer0.bank.loyalty.com:7051
+      - CORE_PEER_LOCALMSPID=BankOrgMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/bank.loyalty.com/peers/peer0.bank.loyalty.com/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/bank.loyalty.com/peers/peer0.bank.loyalty.com/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/bank.loyalty.com/peers/peer0.bank.loyalty.com/tls/ca.crt
+      - CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/bank.loyalty.com/users/Admin@bank.loyalty.com/msp
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: /bin/bash
+    volumes:
+      - /var/run/:/host/var/run/
+      - ./../loyalty-chaincode:/opt/gopath/src/github.com/hyperledger/fabric-peer/loyalty-chaincode
+      - ../network:/opt/gopath/src/github.com/hyperledger/fabric/peer
+    networks:
+      - loyalty-cryptogen
+
+volumes:
+  orderer.loyalty.com:
+  peer0.bank.loyalty.com:
+  peer1.bank.loyalty.com:
+  couchdb0-data:
+  couchdb1-data:

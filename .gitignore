@@ -1,0 +1,27 @@
+# Fabric generated files
+network/organizations/peerOrganizations
+network/organizations/ordererOrganizations
+network/organizations/channel-artifacts
+*.key
+
+# Go dependencies and binaries
+vendor/
+*.exe
+*.out
+backend/loyalty-api
+backend/gateway-service
+
+# Node.js dependencies
+frontend/node_modules
+frontend/build
+
+# Environment variables
+.env
+*.env
+
+# IDE settings
+.vscode/
+
+# OS generated files
+.DS_Store
+Thumbs.db

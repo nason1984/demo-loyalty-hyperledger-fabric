@@ -1,0 +1,136 @@
+Organizations:
+  - &OrdererOrg
+    Name: OrdererOrg
+    ID: OrdererMSP
+    MSPDir: /home/ubuntu/loyalty-project/loyalty-network/network/organizations/ordererOrganizations/loyalty.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('OrdererMSP.admin')"
+    OrdererEndpoints:
+      - orderer.loyalty.com:7050
+
+  - &BankOrg
+    Name: BankOrg
+    ID: BankOrgMSP
+    MSPDir: /home/ubuntu/loyalty-project/loyalty-network/network/organizations/peerOrganizations/bank.loyalty.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('BankOrgMSP.admin', 'BankOrgMSP.peer', 'BankOrgMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('BankOrgMSP.admin', 'BankOrgMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('BankOrgMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('BankOrgMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.bank.loyalty.com
+        Port: 7051    
+
+Capabilities:
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_0: true
+
+Application: &ApplicationDefaults
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "ANY Admins"
+    LifecycleEndorsement:
+      Type: ImplicitMeta
+      Rule: "ANY Endorsement"
+    Endorsement:
+      Type: ImplicitMeta
+      Rule: "ANY Endorsement"
+  Capabilities:
+    <<: *ApplicationCapabilities
+
+Orderer: &OrdererDefaults
+  OrdererType: etcdraft
+  Addresses:
+    - orderer.loyalty.com:7050
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 10
+    AbsoluteMaxBytes: 99 MB
+    PreferredMaxBytes: 512 KB
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "ANY Admins"
+    BlockValidation:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+  EtcdRaft:
+    Consenters:
+    - Host: orderer.loyalty.com
+      Port: 7050
+      ClientTLSCert: ../network/organizations/ordererOrganizations/loyalty.com/orderers/orderer.loyalty.com/tls/server.crt
+      ServerTLSCert: ../network/organizations/ordererOrganizations/loyalty.com/orderers/orderer.loyalty.com/tls/server.crt
+  Capabilities:
+    <<: *OrdererCapabilities
+
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "ANY Admins"
+  Capabilities:
+    <<: *ChannelCapabilities
+
+Profiles:
+  LoyaltyGenesisProfile:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Organizations:
+        - *OrdererOrg
+      Capabilities:
+        <<: *OrdererCapabilities
+    Consortiums:
+      LoyaltyConsortium:
+        Organizations:
+          - *BankOrg
+  LoyaltyChannelProfile:
+    Consortium: LoyaltyConsortium
+    <<: *ChannelDefaults
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *BankOrg
+      Capabilities:
+        <<: *ApplicationCapabilities
