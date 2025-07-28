@@ -258,7 +258,7 @@ start_backend() {
     cd "$PROJECT_ROOT"
     
     print_step "Starting backend and frontend services..."
-    docker compose up -d loyalty_backend loyalty_frontend loyalty_postgres
+    docker compose up -d backend frontend postgres
     
     wait_for_service "PostgreSQL" "docker exec loyalty_postgres pg_isready -U loyalty_user" 10 2
     wait_for_service "Backend API" "curl -s http://localhost:8080/health > /dev/null" 15 3
@@ -279,6 +279,39 @@ stop_backend() {
     print_success "Backend services stopped"
 }
 
+# Function to automatically deploy chaincode if needed
+auto_deploy_chaincode() {
+    print_info "Checking chaincode deployment status..."
+    
+    # Wait for network to be ready
+    sleep 5
+    
+    # Check if chaincode is deployed
+    if docker exec cli peer lifecycle chaincode querycommitted --channelID loyaltychannel --name loyalty 2>/dev/null | grep -q "loyalty"; then
+        print_success "Chaincode already deployed"
+        return 0
+    fi
+    
+    print_warning "Chaincode not found, deploying automatically..."
+    
+    # Check if deploy script exists
+    if [ -f "$PROJECT_ROOT/deploy-chaincode.sh" ]; then
+        print_info "Using automated deployment script..."
+        "$PROJECT_ROOT/deploy-chaincode.sh"
+        
+        if [ $? -eq 0 ]; then
+            print_success "Chaincode deployed successfully"
+        else
+            print_error "Automatic chaincode deployment failed"
+            print_info "You can manually deploy using: ./deploy-chaincode.sh"
+            return 1
+        fi
+    else
+        print_warning "Deploy script not found, using legacy method..."
+        deploy_chaincode
+    fi
+}
+
 # Function to show system status
 show_status() {
     print_header "LOYALTY BLOCKCHAIN SYSTEM STATUS"
@@ -287,9 +320,9 @@ show_status() {
     check_service "Fabric Orderer" "orderer.loyalty.com"
     check_service "Fabric Peer0" "peer0.bank.loyalty.com"
     check_service "Fabric Peer1" "peer1.bank.loyalty.com"
-    check_service "Loyalty Backend" "loyalty_backend"
-    check_service "Loyalty Frontend" "loyalty_frontend"
-    check_service "PostgreSQL" "loyalty_postgres"
+    check_service "Loyalty Backend" "backend"
+    check_service "Loyalty Frontend" "frontend"
+    check_service "PostgreSQL" "postgres"
     check_service "Explorer" "explorer"
     check_service "Explorer DB" "explorerdb"
     
@@ -326,13 +359,16 @@ start_all() {
     print_step "Step 1: Starting Fabric Network..."
     start_network
     
-    print_step "Step 2: Starting Backend Services..."
+    print_step "Step 2: Checking and Deploying Chaincode..."
+    auto_deploy_chaincode
+    
+    print_step "Step 3: Starting Backend Services..."
     start_backend
     
-    print_step "Step 3: Starting Explorer..."
+    print_step "Step 4: Starting Explorer..."
     start_explorer
     
-    print_step "Step 4: Testing Chaincode..."
+    print_step "Step 5: Testing Chaincode..."
     test_chaincode
     
     print_success "🎉 Complete system started successfully!"
@@ -383,6 +419,9 @@ usage() {
     echo "  deploy-chaincode [VER]    Deploy/upgrade chaincode (default version: 1.3)"
     echo "  test-chaincode            Test chaincode functions"
     echo "  status                    Show system status"
+    echo "  backup                    Create system backup"
+    echo "  restore [BACKUP_NAME]     Restore from backup"
+    echo "  auto-deploy               Auto-deploy chaincode if missing"
     echo "  help                      Show this help message"
     echo ""
     echo -e "${YELLOW}Examples:${NC}"
@@ -428,6 +467,15 @@ case "${1}" in
         ;;
     "status")
         show_status
+        ;;
+    "backup")
+        "$PROJECT_ROOT/backup-restore.sh" backup
+        ;;
+    "restore")
+        "$PROJECT_ROOT/backup-restore.sh" restore "$2"
+        ;;
+    "auto-deploy")
+        auto_deploy_chaincode
         ;;
     "help"|"--help"|"-h")
         usage

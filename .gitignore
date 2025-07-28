@@ -4,6 +4,17 @@ network/organizations/ordererOrganizations
 network/organizations/channel-artifacts
 *.key
 
+# Hyperledger Fabric certificates and crypto materials
+loyalty-network/network/organizations/
+loyalty-network/network/channel-artifacts/
+loyalty-network/network/system-genesis-block/
+loyalty-network/network/chaincode/
+loyalty-network/network/*.tar.gz
+loyalty-network/network/metadata.json
+
+# Backup files
+backups/
+
 # Go dependencies and binaries
 vendor/
 *.exe

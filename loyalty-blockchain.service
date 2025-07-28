@@ -1,0 +1,27 @@
+[Unit]
+Description=Loyalty Blockchain System
+After=docker.service
+Requires=docker.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=forking
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/loyalty-project
+ExecStart=/home/ubuntu/loyalty-project/manage-loyalty-system.sh start-all
+ExecStop=/home/ubuntu/loyalty-project/manage-loyalty-system.sh stop-all
+ExecReload=/home/ubuntu/loyalty-project/manage-loyalty-system.sh restart-all
+RemainAfterExit=yes
+RestartSec=30
+Restart=on-failure
+TimeoutStartSec=300
+TimeoutStopSec=120
+
+# Environment
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+Environment=DOCKER_HOST=unix:///var/run/docker.sock
+
+[Install]
+WantedBy=multi-user.target
