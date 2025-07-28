@@ -1,0 +1,10 @@
+{
+    "network-configs": {
+        "loyalty-network": {
+            "name": "Loyalty Network",
+            "profile": "./connection-profile/loyalty-network.json",
+            "enableAuthentication": false
+        }
+    },
+    "license": "Apache-2.0"
+}

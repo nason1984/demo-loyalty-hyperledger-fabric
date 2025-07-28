@@ -1,0 +1,63 @@
+{
+    "name": "loyalty-network",
+    "version": "1.0.0",
+    "client": {
+        "tlsEnable": true,
+        "adminCredential": {
+            "id": "admin",
+            "password": "adminpw"
+        },
+        "enableAuthentication": false,
+        "organization": "BankOrgMSP",
+        "connection": {
+            "timeout": {
+                "peer": {
+                    "endorser": "300"
+                },
+                "orderer": "300"
+            }
+        }
+    },
+    "channels": {
+        "loyaltychannel": {
+            "peers": {
+                "peer0.bank.loyalty.com": {},
+                "peer1.bank.loyalty.com": {}
+            }
+        }
+    },
+    "organizations": {
+        "BankOrgMSP": {
+            "mspid": "BankOrgMSP",
+            "peers": ["peer0.bank.loyalty.com", "peer1.bank.loyalty.com"],
+            "signedCert": {
+                "path": "/tmp/crypto/peerOrganizations/bank.loyalty.com/users/Admin@bank.loyalty.com/msp/signcerts/Admin@bank.loyalty.com-cert.pem"
+            },
+            "adminPrivateKey": {
+                "path": "/tmp/crypto/peerOrganizations/bank.loyalty.com/users/Admin@bank.loyalty.com/msp/keystore/priv_sk"
+            }
+        }
+    },
+    "peers": {
+        "peer0.bank.loyalty.com": {
+            "tlsCACerts": {
+                "path": "/tmp/crypto/peerOrganizations/bank.loyalty.com/peers/peer0.bank.loyalty.com/tls/ca.crt"
+            },
+            "url": "grpcs://peer0.bank.loyalty.com:7051"
+        },
+        "peer1.bank.loyalty.com": {
+            "tlsCACerts": {
+                "path": "/tmp/crypto/peerOrganizations/bank.loyalty.com/peers/peer1.bank.loyalty.com/tls/ca.crt"
+            },
+            "url": "grpcs://peer1.bank.loyalty.com:8051"
+        }
+    },
+    "orderers": {
+        "orderer.loyalty.com": {
+            "url": "grpcs://orderer.loyalty.com:7050",
+            "tlsCACerts": {
+                "path": "/tmp/crypto/ordererOrganizations/loyalty.com/orderers/orderer.loyalty.com/msp/tlscacerts/tlsca.loyalty.com-cert.pem"
+            }
+        }
+    }
+}
