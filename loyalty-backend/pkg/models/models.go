@@ -44,6 +44,12 @@ type TransferPointsRequest struct {
 	Description      string `json:"description"`
 }
 
+// LoginRequest represents the request to login
+type LoginRequest struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
 // APIResponse represents a standard API response
 type APIResponse struct {
 	Success bool        `json:"success"`

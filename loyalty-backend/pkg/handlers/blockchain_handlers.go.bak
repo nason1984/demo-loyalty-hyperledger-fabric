@@ -1,0 +1,400 @@
+package handlers
+
+import (
+	"net/http"
+	"strconv"
+	"time"
+
+	"loyalty-backend/pkg/fabric"
+	"github.com/gin-gonic/gin"
+)
+
+// BlockchainHandler handles blockchain-related API requests
+type BlockchainHandler struct {
+	FabricClient *fabric.FabricClient
+}
+
+// NewBlockchainHandler creates a new blockchain handler
+func NewBlockchainHandler(fabricClient *fabric.FabricClient) *BlockchainHandler {
+	return &BlockchainHandler{
+		FabricClient: fabricClient,
+	}
+}
+
+// CreateCustomerOnBlockchain creates a new customer on blockchain
+func (h *BlockchainHandler) CreateCustomerOnBlockchain(c *gin.Context) {
+	var request struct {
+		CustomerID string `json:"customerID" binding:"required"`
+		Username   string `json:"username" binding:"required"`
+		Email      string `json:"email" binding:"required"`
+		FullName   string `json:"fullName" binding:"required"`
+		Phone      string `json:"phone"`
+		Tier       string `json:"tier"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Set defaults
+	if request.Tier == "" {
+		request.Tier = "BRONZE"
+	}
+
+	// Create customer on blockchain
+	customer, err := h.FabricClient.CreateCustomer(
+		request.CustomerID,
+		request.Username,
+		request.Email,
+		request.FullName,
+		request.Phone,
+		time.Now().Format(time.RFC3339),
+		"ACTIVE",
+		request.Tier,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create customer on blockchain: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message":  "Customer created successfully on blockchain",
+		"customer": customer,
+	})
+}
+
+// CreateLoyaltyAccountOnBlockchain creates a loyalty account on blockchain
+func (h *BlockchainHandler) CreateLoyaltyAccountOnBlockchain(c *gin.Context) {
+	var request struct {
+		CustomerID     string `json:"customerID" binding:"required"`
+		InitialBalance int    `json:"initialBalance"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Create loyalty account on blockchain
+	account, err := h.FabricClient.CreateLoyaltyAccount(request.CustomerID, request.InitialBalance)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create loyalty account on blockchain: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Loyalty account created successfully on blockchain",
+		"account": account,
+	})
+}
+
+// IssuePointsOnBlockchain issues points to a customer on blockchain
+func (h *BlockchainHandler) IssuePointsOnBlockchain(c *gin.Context) {
+	var request struct {
+		CustomerID  string `json:"customerID" binding:"required"`
+		Amount      int    `json:"amount" binding:"required,min=1"`
+		Reason      string `json:"reason" binding:"required"`
+		Channel     string `json:"channel"`
+		Location    string `json:"location"`
+		EmployeeID  string `json:"employeeID"`
+		PartnerTxID string `json:"partnerTxID"`
+		ExpiryDate  string `json:"expiryDate"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Set defaults
+	if request.Channel == "" {
+		request.Channel = "API"
+	}
+	if request.Location == "" {
+		request.Location = "SYSTEM"
+	}
+
+	// Issue points on blockchain
+	transaction, err := h.FabricClient.IssuePoints(
+		request.CustomerID,
+		request.Amount,
+		request.Reason,
+		request.Channel,
+		request.Location,
+		request.EmployeeID,
+		request.PartnerTxID,
+		request.ExpiryDate,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to issue points on blockchain: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":     "Points issued successfully on blockchain",
+		"transaction": transaction,
+	})
+}
+
+// GetLoyaltyAccountFromBlockchain gets loyalty account from blockchain
+func (h *BlockchainHandler) GetLoyaltyAccountFromBlockchain(c *gin.Context) {
+	customerID := c.Param("customerID")
+	if customerID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Customer ID is required"})
+		return
+	}
+
+	// Get loyalty account from blockchain
+	account, err := h.FabricClient.GetLoyaltyAccount(customerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get loyalty account from blockchain: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"customerID": customerID,
+		"account":    account,
+	})
+}
+
+// RedeemPointsOnBlockchain redeems points for a reward on blockchain
+func (h *BlockchainHandler) RedeemPointsOnBlockchain(c *gin.Context) {
+	var request struct {
+		CustomerID string `json:"customerID" binding:"required"`
+		RewardID   string `json:"rewardID" binding:"required"`
+		Quantity   int    `json:"quantity" binding:"required,min=1"`
+		Channel    string `json:"channel"`
+		Location   string `json:"location"`
+		EmployeeID string `json:"employeeID"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Set defaults
+	if request.Channel == "" {
+		request.Channel = "API"
+	}
+	if request.Location == "" {
+		request.Location = "SYSTEM"
+	}
+
+	// Redeem points on blockchain
+	redemption, err := h.FabricClient.RedeemPoints(
+		request.CustomerID,
+		request.RewardID,
+		request.Quantity,
+		request.Channel,
+		request.Location,
+		request.EmployeeID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to redeem points on blockchain: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "Points redeemed successfully on blockchain",
+		"redemption": redemption,
+	})
+}
+
+// TransferPointsOnBlockchain transfers points between customers on blockchain
+func (h *BlockchainHandler) TransferPointsOnBlockchain(c *gin.Context) {
+	var request struct {
+		FromCustomerID string `json:"fromCustomerID" binding:"required"`
+		ToCustomerID   string `json:"toCustomerID" binding:"required"`
+		Amount         int    `json:"amount" binding:"required,min=1"`
+		Message        string `json:"message"`
+		Channel        string `json:"channel"`
+		Location       string `json:"location"`
+		EmployeeID     string `json:"employeeID"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Set defaults
+	if request.Channel == "" {
+		request.Channel = "API"
+	}
+	if request.Location == "" {
+		request.Location = "SYSTEM"
+	}
+
+	// Transfer points on blockchain
+	transaction, err := h.FabricClient.TransferPoints(
+		request.FromCustomerID,
+		request.ToCustomerID,
+		request.Amount,
+		request.Message,
+		request.Channel,
+		request.Location,
+		request.EmployeeID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to transfer points on blockchain: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":     "Points transferred successfully on blockchain",
+		"transaction": transaction,
+	})
+}
+
+// GetTransactionHistoryFromBlockchain gets transaction history from blockchain
+func (h *BlockchainHandler) GetTransactionHistoryFromBlockchain(c *gin.Context) {
+	customerID := c.Param("customerID")
+	if customerID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Customer ID is required"})
+		return
+	}
+
+	limitStr := c.DefaultQuery("limit", "50")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		limit = 50
+	}
+
+	// Get transaction history from blockchain
+	transactionsData, err := h.FabricClient.GetTransactionHistory(customerID, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get transaction history from blockchain: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"customerID":   customerID,
+		"transactions": transactionsData,
+	})
+}
+
+// GetAvailableRewardsFromBlockchain gets available rewards from blockchain
+func (h *BlockchainHandler) GetAvailableRewardsFromBlockchain(c *gin.Context) {
+	customerID := c.Param("customerID")
+	if customerID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Customer ID is required"})
+		return
+	}
+
+	// Get available rewards from blockchain
+	rewards, err := h.FabricClient.GetAvailableRewards(customerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get available rewards from blockchain: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"customerID": customerID,
+		"rewards":    rewards,
+	})
+}
+
+// GetCustomerDashboardFromBlockchain gets customer dashboard data from blockchain
+func (h *BlockchainHandler) GetCustomerDashboardFromBlockchain(c *gin.Context) {
+	customerID := c.Param("customerID")
+	if customerID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Customer ID is required"})
+		return
+	}
+
+	// Get customer from blockchain
+	customerData, err := h.FabricClient.GetCustomer(customerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get customer from blockchain: " + err.Error()})
+		return
+	}
+	customer, ok := customerData.(*fabric.Customer)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid customer data format"})
+		return
+	}
+
+	// Get loyalty account from blockchain
+	accountData, err := h.FabricClient.GetLoyaltyAccount(customerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get loyalty account from blockchain: " + err.Error()})
+		return
+	}
+	account, ok := accountData.(*fabric.LoyaltyAccount)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid account data format"})
+		return
+	}
+
+	// Get available rewards from blockchain
+	rewards, err := h.FabricClient.GetAvailableRewards(customerID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get available rewards from blockchain: " + err.Error()})
+		return
+	}
+
+	// Calculate tier progress
+	var nextTierThreshold int
+	switch customer.Tier {
+	case "BRONZE":
+		nextTierThreshold = 10000
+	case "SILVER":
+		nextTierThreshold = 25000
+	case "GOLD":
+		nextTierThreshold = 50000
+	case "PLATINUM":
+		nextTierThreshold = account.LifetimeEarned
+	default:
+		nextTierThreshold = 10000
+	}
+
+	tierProgress := float64(account.LifetimeEarned) / float64(nextTierThreshold) * 100
+	if tierProgress > 100 {
+		tierProgress = 100
+	}
+
+	dashboardData := gin.H{
+		"customer": gin.H{
+			"customerID": customer.CustomerID,
+			"username":   customer.Username,
+			"email":      customer.Email,
+			"fullName":   customer.FullName,
+			"tier":       customer.Tier,
+			"status":     customer.Status,
+		},
+		"account": gin.H{
+			"balance":          account.Balance,
+			"lifetimeEarned":   account.LifetimeEarned,
+			"lifetimeRedeemed": account.LifetimeRedeemed,
+			"status":           account.Status,
+		},
+		"tierProgress": gin.H{
+			"currentTier":       customer.Tier,
+			"nextTier":          getNextTier(customer.Tier),
+			"currentPoints":     account.LifetimeEarned,
+			"nextTierThreshold": nextTierThreshold,
+			"progressPercent":   tierProgress,
+		},
+		"recentRewards": rewards,
+	}
+
+	c.JSON(http.StatusOK, dashboardData)
+}
+
+// Helper function to get next tier
+func getNextTier(currentTier string) string {
+	switch currentTier {
+	case "BRONZE":
+		return "SILVER"
+	case "SILVER":
+		return "GOLD"
+	case "GOLD":
+		return "PLATINUM"
+	case "PLATINUM":
+		return "PLATINUM"
+	default:
+		return "BRONZE"
+	}
+}

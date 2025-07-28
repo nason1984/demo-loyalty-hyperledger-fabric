@@ -1,203 +1,231 @@
 // File: src/pages/Customer/Dashboard/index.tsx
 
-import React from 'react';
-import { Row, Col, Card, Statistic, Typography } from 'antd';
-import { WalletOutlined, RiseOutlined, FallOutlined } from '@ant-design/icons';
+import React, { useEffect, useState } from 'react';
+import { Row, Col, Card, Statistic, Typography, Button, Table, Spin, Alert, message } from 'antd';
+import { WalletOutlined, GiftOutlined, SwapOutlined, EyeOutlined } from '@ant-design/icons';
+import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import axiosClient from '../../../api/axiosClient';
+import { RootState } from '../../../redux/store';
 
-// =========================================================================================
-// Sprint 3 - Task 3: Xây dựng Dashboard Khách hàng
-// Yêu cầu: VIEW-CUS-01
-//
-// Logic chính:
-// 1. Hiển thị một tiêu đề chào mừng người dùng, ví dụ: "Tổng quan tài khoản của bạn".
-// 2. Sử dụng `Row` và `Col` để tạo một lưới hiển thị các thông tin chính.
-// 3. Sử dụng component `Statistic` bên trong các `Card` để hiển thị các số liệu sau (dùng dữ liệu giả lập - hardcoded data):
-//    - "Số dư hiện tại" (ví dụ: 1,500 điểm) với icon `WalletOutlined`.
-//    - "Tổng điểm đã tích lũy" (ví dụ: 2,500 điểm) với icon `RiseOutlined`.
-//    - "Tổng điểm đã sử dụng" (ví dụ: 1,000 điểm) với icon `FallOutlined`.
-// =========================================================================================
-// Gợi ý cho Copilot:
+const { Title, Text } = Typography;
+
+// Interface cho dữ liệu tài khoản
+interface AccountData {
+    customerID: string;
+    balance: number;
+    lastUpdated: string;
+}
+
+// Interface cho giao dịch
+interface Transaction {
+    id: string;
+    timestamp: string;
+    description: string;
+    amount: number;
+    type: 'earn' | 'redeem' | 'transfer' | 'bonus';
+}
+
 const CustomerDashboard: React.FC = () => {
-    // Dữ liệu giả lập (hardcoded data)
-    const accountData = {
-        currentBalance: 1500,
-        totalEarned: 2500,
-        totalUsed: 1000,
-        customerName: "Nguyễn Văn A",
-        lastUpdated: "2025-01-23 14:30:00"
-    };
+    // Lấy thông tin người dùng từ Redux store
+    const { user } = useSelector((state: RootState) => state.auth);
+    
+    // State management
+    const [accountData, setAccountData] = useState<AccountData | null>(null);
+    const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // Fetch data từ API
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            if (!user?.username) {
+                setError('Không tìm thấy thông tin người dùng');
+                setLoading(false);
+                return;
+            }
+
+            try {
+                setLoading(true);
+                setError(null);
+                
+                // Gọi đồng thời 2 API
+                const [accountResponse, transactionsResponse] = await Promise.all([
+                    axiosClient.get(`/accounts/${user.username}`),
+                    axiosClient.get(`/accounts/${user.username}/recent-transactions`)
+                ]);
+                
+                console.log('Account API response:', accountResponse);
+                console.log('Transactions API response:', transactionsResponse);
+                
+                // Xử lý dữ liệu tài khoản
+                const accountApiData = accountResponse.data?.data || accountResponse.data;
+                console.log('Parsed account data:', accountApiData);
+                setAccountData(accountApiData);
+                
+                // Xử lý dữ liệu giao dịch  
+                const transactionsApiData = transactionsResponse.data?.data || transactionsResponse.data;
+                console.log('Parsed transactions data:', transactionsApiData);
+                setRecentTransactions(Array.isArray(transactionsApiData) ? transactionsApiData : []);
+                
+            } catch (err: any) {
+                console.error('API Error:', err);
+                setError(err.response?.data?.error || err.message || 'Có lỗi xảy ra khi tải dữ liệu');
+                message.error('Không thể tải dữ liệu dashboard');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+    }, [user?.username]);
+
+    // Cấu hình columns cho bảng giao dịch
+    const transactionColumns = [
+        {
+            title: 'Thời gian',
+            dataIndex: 'timestamp',
+            key: 'timestamp',
+            width: '25%',
+            render: (timestamp: string) => (
+                <Text>{new Date(timestamp).toLocaleString('vi-VN')}</Text>
+            ),
+        },
+        {
+            title: 'Mô tả',
+            dataIndex: 'description',
+            key: 'description',
+            ellipsis: true,
+        },
+        {
+            title: 'Số điểm',
+            dataIndex: 'amount',
+            key: 'amount',
+            width: '20%',
+            render: (amount: number) => (
+                <Text style={{ 
+                    color: amount > 0 ? '#52c41a' : '#ff4d4f',
+                    fontWeight: 'bold'
+                }}>
+                    {amount > 0 ? '+' : ''}{amount}
+                </Text>
+            ),
+        },
+    ];
+
+    // Hiển thị loading
+    if (loading) {
+        return (
+            <div style={{ textAlign: 'center', padding: '50px' }}>
+                <Spin size="large" />
+                <div style={{ marginTop: '16px' }}>
+                    <Text>Đang tải dữ liệu...</Text>
+                </div>
+            </div>
+        );
+    }
+
+    // Hiển thị lỗi
+    if (error) {
+        return (
+            <div style={{ padding: '20px' }}>
+                <Alert
+                    message="Lỗi tải dữ liệu"
+                    description={error}
+                    type="error"
+                    showIcon
+                />
+            </div>
+        );
+    }
 
     return (
         <div style={{ padding: '0' }}>
-            {/* 1. Tiêu đề chào mừng người dùng */}
-            <div style={{ marginBottom: '24px' }}>
-                <Typography.Title level={2} style={{ margin: 0, color: '#1890ff' }}>
-                    Tổng quan tài khoản của bạn
-                </Typography.Title>
-                <Typography.Text type="secondary" style={{ fontSize: '16px' }}>
-                    Xin chào <strong>{accountData.customerName}</strong>, chào mừng bạn quay trở lại!
-                </Typography.Text>
-            </div>
-
-            {/* 2. & 3. Lưới hiển thị các thông tin chính */}
+            <Title level={2} style={{ marginBottom: '24px' }}>
+                Chào mừng, {user?.username}!
+            </Title>
+            
             <Row gutter={[24, 24]}>
-                {/* Số dư hiện tại */}
-                <Col xs={24} sm={12} md={8}>
-                    <Card
-                        style={{
-                            borderRadius: '12px',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                            border: '1px solid #e8f4ff',
-                            background: 'linear-gradient(135deg, #e8f4ff 0%, #ffffff 100%)'
-                        }}
-                        bodyStyle={{ padding: '24px' }}
-                    >
+                {/* Cột Trái */}
+                <Col xs={24} lg={16}>
+                    {/* Card Số dư hiện tại */}
+                    <Card style={{ marginBottom: '24px' }}>
                         <Statistic
-                            title={
-                                <span style={{ 
-                                    fontSize: '16px', 
-                                    fontWeight: '500',
-                                    color: '#595959'
-                                }}>
-                                    Số dư hiện tại
-                                </span>
-                            }
-                            value={accountData.currentBalance}
+                            title="Số dư hiện tại"
+                            value={accountData?.balance || 0}
+                            precision={0}
+                            valueStyle={{ color: '#3f8600', fontSize: '36px' }}
+                            prefix={<WalletOutlined />}
                             suffix="điểm"
-                            valueStyle={{ 
-                                color: '#1890ff',
-                                fontSize: '32px',
-                                fontWeight: 'bold'
-                            }}
-                            prefix={<WalletOutlined style={{ marginRight: '8px' }} />}
                         />
-                        <Typography.Text type="secondary" style={{ fontSize: '12px' }}>
-                            Cập nhật lần cuối: {accountData.lastUpdated}
-                        </Typography.Text>
-                    </Card>
-                </Col>
-
-                {/* Tổng điểm đã tích lũy */}
-                <Col xs={24} sm={12} md={8}>
-                    <Card
-                        style={{
-                            borderRadius: '12px',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                            border: '1px solid #f6ffed',
-                            background: 'linear-gradient(135deg, #f6ffed 0%, #ffffff 100%)'
-                        }}
-                        bodyStyle={{ padding: '24px' }}
-                    >
-                        <Statistic
-                            title={
-                                <span style={{ 
-                                    fontSize: '16px', 
-                                    fontWeight: '500',
-                                    color: '#595959'
-                                }}>
-                                    Tổng điểm đã tích lũy
-                                </span>
+                        <Text type="secondary" style={{ fontSize: '12px' }}>
+                            Cập nhật lần cuối: {accountData?.lastUpdated ? 
+                                new Date(accountData.lastUpdated).toLocaleString('vi-VN') : 
+                                'Chưa có dữ liệu'
                             }
-                            value={accountData.totalEarned}
-                            suffix="điểm"
-                            valueStyle={{ 
-                                color: '#52c41a',
-                                fontSize: '32px',
-                                fontWeight: 'bold'
-                            }}
-                            prefix={<RiseOutlined style={{ marginRight: '8px' }} />}
-                        />
-                        <Typography.Text type="secondary" style={{ fontSize: '12px' }}>
-                            Tích lũy từ các giao dịch
-                        </Typography.Text>
+                        </Text>
                     </Card>
-                </Col>
 
-                {/* Tổng điểm đã sử dụng */}
-                <Col xs={24} sm={12} md={8}>
+                    {/* Card Giao dịch gần đây */}
                     <Card
-                        style={{
-                            borderRadius: '12px',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                            border: '1px solid #fff2e8',
-                            background: 'linear-gradient(135deg, #fff2e8 0%, #ffffff 100%)'
-                        }}
-                        bodyStyle={{ padding: '24px' }}
-                    >
-                        <Statistic
-                            title={
-                                <span style={{ 
-                                    fontSize: '16px', 
-                                    fontWeight: '500',
-                                    color: '#595959'
-                                }}>
-                                    Tổng điểm đã sử dụng
-                                </span>
-                            }
-                            value={accountData.totalUsed}
-                            suffix="điểm"
-                            valueStyle={{ 
-                                color: '#fa8c16',
-                                fontSize: '32px',
-                                fontWeight: 'bold'
-                            }}
-                            prefix={<FallOutlined style={{ marginRight: '8px' }} />}
-                        />
-                        <Typography.Text type="secondary" style={{ fontSize: '12px' }}>
-                            Sử dụng cho quy đổi và chuyển khoản
-                        </Typography.Text>
-                    </Card>
-                </Col>
-            </Row>
-
-            {/* Thông tin bổ sung */}
-            <Row style={{ marginTop: '24px' }}>
-                <Col span={24}>
-                    <Card
-                        title={
-                            <Typography.Title level={4} style={{ margin: 0 }}>
-                                📊 Thống kê nhanh
-                            </Typography.Title>
+                        title="Giao dịch gần đây"
+                        extra={
+                            <Link to="/history">
+                                <Button type="link" icon={<EyeOutlined />}>
+                                    Xem tất cả
+                                </Button>
+                            </Link>
                         }
-                        style={{
-                            borderRadius: '12px',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                        }}
                     >
-                        <Row gutter={[16, 16]}>
-                            <Col xs={24} sm={12} md={6}>
-                                <div style={{ textAlign: 'center', padding: '16px' }}>
-                                    <Typography.Title level={3} style={{ color: '#722ed1', margin: '0 0 8px 0' }}>
-                                        {Math.round((accountData.totalUsed / accountData.totalEarned) * 100)}%
-                                    </Typography.Title>
-                                    <Typography.Text type="secondary">Tỷ lệ sử dụng</Typography.Text>
-                                </div>
-                            </Col>
-                            <Col xs={24} sm={12} md={6}>
-                                <div style={{ textAlign: 'center', padding: '16px' }}>
-                                    <Typography.Title level={3} style={{ color: '#13c2c2', margin: '0 0 8px 0' }}>
-                                        {accountData.totalEarned - accountData.totalUsed}
-                                    </Typography.Title>
-                                    <Typography.Text type="secondary">Điểm tiết kiệm</Typography.Text>
-                                </div>
-                            </Col>
-                            <Col xs={24} sm={12} md={6}>
-                                <div style={{ textAlign: 'center', padding: '16px' }}>
-                                    <Typography.Title level={3} style={{ color: '#eb2f96', margin: '0 0 8px 0' }}>
-                                        15
-                                    </Typography.Title>
-                                    <Typography.Text type="secondary">Giao dịch tháng này</Typography.Text>
-                                </div>
-                            </Col>
-                            <Col xs={24} sm={12} md={6}>
-                                <div style={{ textAlign: 'center', padding: '16px' }}>
-                                    <Typography.Title level={3} style={{ color: '#52c41a', margin: '0 0 8px 0' }}>
-                                        VIP
-                                    </Typography.Title>
-                                    <Typography.Text type="secondary">Hạng thành viên</Typography.Text>
-                                </div>
-                            </Col>
-                        </Row>
+                        <Table
+                            columns={transactionColumns}
+                            dataSource={recentTransactions}
+                            rowKey="id"
+                            pagination={false}
+                            size="small"
+                            locale={{
+                                emptyText: 'Chưa có giao dịch nào'
+                            }}
+                        />
+                    </Card>
+                </Col>
+
+                {/* Cột Phải */}
+                <Col xs={24} lg={8}>
+                    <Card title="Hành động nhanh">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <Link to="/redeem" style={{ textDecoration: 'none' }}>
+                                <Button 
+                                    type="primary" 
+                                    size="large" 
+                                    block
+                                    icon={<GiftOutlined />}
+                                    style={{ 
+                                        height: '60px',
+                                        fontSize: '16px',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    Quy đổi Ngay
+                                </Button>
+                            </Link>
+                            
+                            <Link to="/transfer" style={{ textDecoration: 'none' }}>
+                                <Button 
+                                    type="default" 
+                                    size="large" 
+                                    block
+                                    icon={<SwapOutlined />}
+                                    style={{ 
+                                        height: '60px',
+                                        fontSize: '16px',
+                                        fontWeight: 'bold'
+                                    }}
+                                >
+                                    Chuyển Điểm
+                                </Button>
+                            </Link>
+                        </div>
                     </Card>
                 </Col>
             </Row>

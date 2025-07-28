@@ -5,6 +5,23 @@ networks:
     driver: bridge
 
 services:
+  # PostgreSQL Database Service
+  postgres:
+    image: postgres:15-alpine
+    container_name: loyalty_postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: loyalty_db
+      POSTGRES_USER: loyalty_user
+      POSTGRES_PASSWORD: loyalty_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./loyalty-backend/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - loyalty_network
+
   # Backend API Service
   backend:
     build:
@@ -13,10 +30,19 @@ services:
     restart: always
     ports:
       - "8080:8080"
+    depends_on:
+      - postgres
     environment:
-      # Cấu hình để backend chạy standalone mode
+      # Database configuration
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=loyalty_user
+      - DB_PASSWORD=loyalty_password
+      - DB_NAME=loyalty_db
+      # Application configuration
       - PORT=8080
-      - MODE=standalone
+      - MODE=database
+      - JWT_SECRET=loyalty-app-secret-key-2024-postgresql
     networks:
       - loyalty_network
 
@@ -60,3 +86,4 @@ services:
 
 volumes:
   grafana-storage:
+  postgres_data:

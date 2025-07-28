@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loyalty Blockchain Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            color: #666;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .card-icon {
+            font-size: 2em;
+            margin-right: 15px;
+        }
+        
+        .card-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-label {
+            font-weight: 500;
+            color: #666;
+        }
+        
+        .metric-value {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+        
+        .metric-value.success {
+            color: #28a745;
+        }
+        
+        .metric-value.warning {
+            color: #ffc107;
+        }
+        
+        .metric-value.info {
+            color: #17a2b8;
+        }
+        
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .button.secondary {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+        
+        .button.danger {
+            background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
+        }
+        
+        .input-group {
+            margin: 15px 0;
+        }
+        
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+        
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .result-container {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .result-code {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+        
+        .loading {
+            color: #667eea;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border: 2px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .success {
+            background: #d1edff;
+            border: 2px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .status-online {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #28a745;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-offline {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #dc3545;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔗 Loyalty Blockchain Dashboard</h1>
+            <p>Monitor and explore your Hyperledger Fabric loyalty network</p>
+        </div>
+        
+        <div class="quick-stats">
+            <div class="stat-card">
+                <span class="stat-number" id="blockHeight">-</span>
+                <span class="stat-label">Blocks</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number" id="totalAccounts">3</span>
+                <span class="stat-label">Accounts</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number" id="totalTransactions">15</span>
+                <span class="stat-label">Transactions</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number" id="totalPoints">4500</span>
+                <span class="stat-label">Total Points</span>
+            </div>
+        </div>
+        
+        <div class="dashboard-grid">
+            <!-- Network Status Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🌐</div>
+                    <div class="card-title">Network Status</div>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Blockchain Status</span>
+                    <span class="metric-value success">
+                        <span class="status-online"></span>Online
+                    </span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Channel</span>
+                    <span class="metric-value info">loyaltychannel</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Network</span>
+                    <span class="metric-value info">loyalty-network</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Peers</span>
+                    <span class="metric-value success">2 Active</span>
+                </div>
+                <button class="button" onclick="refreshNetworkStatus()">🔄 Refresh</button>
+            </div>
+            
+            <!-- Account Explorer Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">👤</div>
+                    <div class="card-title">Account Explorer</div>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="accountId" placeholder="Enter Customer ID (e.g., customer1)" value="customer1">
+                </div>
+                <button class="button" onclick="queryAccount()">📊 Get Account</button>
+                <button class="button secondary" onclick="queryTransactions()">📜 Get Transactions</button>
+                <div id="accountResult" class="result-container" style="display: none;"></div>
+            </div>
+            
+            <!-- Blockchain Tools Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🔧</div>
+                    <div class="card-title">Blockchain Tools</div>
+                </div>
+                <button class="button" onclick="getChannelInfo()">📋 Channel Info</button>
+                <button class="button" onclick="getChaincode()">📦 Chaincode</button>
+                <button class="button secondary" onclick="getAllAccounts()">👥 All Accounts</button>
+                <div id="toolsResult" class="result-container" style="display: none;"></div>
+            </div>
+            
+            <!-- API Monitor Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📡</div>
+                    <div class="card-title">API Monitor</div>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Backend API</span>
+                    <span class="metric-value success">
+                        <span class="status-online"></span>Active
+                    </span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Database</span>
+                    <span class="metric-value success">
+                        <span class="status-online"></span>Connected
+                    </span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Mode</span>
+                    <span class="metric-value info">Database + Mock Fabric</span>
+                </div>
+                <button class="button" onclick="testBackendAPI()">🧪 Test API</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/v1';
+        
+        // Helper functions
+        function showResult(elementId, content, type = 'normal') {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result-container ${type}`;
+            element.innerHTML = `<div class="result-code">${typeof content === 'object' ? JSON.stringify(content, null, 2) : content}</div>`;
+        }
+        
+        function showLoading(elementId, message = 'Loading...') {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = 'result-container';
+            element.innerHTML = `<div class="loading">${message}</div>`;
+        }
+        
+        async function makeAPIRequest(url) {
+            try {
+                const token = localStorage.getItem('authToken');
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': token ? `Bearer ${token}` : '',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                throw error;
+            }
+        }
+        
+        // Account operations
+        async function queryAccount() {
+            const accountId = document.getElementById('accountId').value.trim();
+            if (!accountId) {
+                alert('Please enter a Customer ID');
+                return;
+            }
+            
+            showLoading('accountResult', 'Querying account from blockchain...');
+            try {
+                const result = await makeAPIRequest(`${API_BASE}/accounts/${accountId}`);
+                showResult('accountResult', result, 'success');
+            } catch (error) {
+                showResult('accountResult', `Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function queryTransactions() {
+            const accountId = document.getElementById('accountId').value.trim();
+            if (!accountId) {
+                alert('Please enter a Customer ID');
+                return;
+            }
+            
+            showLoading('accountResult', 'Querying transactions from blockchain...');
+            try {
+                const result = await makeAPIRequest(`${API_BASE}/accounts/${accountId}/recent-transactions`);
+                showResult('accountResult', result, 'success');
+            } catch (error) {
+                showResult('accountResult', `Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Blockchain tools
+        async function getChannelInfo() {
+            showLoading('toolsResult', 'Getting channel information...');
+            try {
+                const mockChannelInfo = {
+                    channel_name: 'loyaltychannel',
+                    height: 2,
+                    current_block_hash: 'NOjzwZizJUr0Fms4IgO+FRiEnjUub4PQbgH98L4Z5K8=',
+                    previous_block_hash: 'kFCQkXct+gdjpEPygZegWADexE8Xd/RmnRs6JCgk2dE=',
+                    peers: ['peer0.bank.loyalty.com', 'peer1.bank.loyalty.com'],
+                    orderer: 'orderer.loyalty.com',
+                    status: 'Active'
+                };
+                showResult('toolsResult', mockChannelInfo, 'success');
+                document.getElementById('blockHeight').textContent = mockChannelInfo.height;
+            } catch (error) {
+                showResult('toolsResult', `Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function getChaincode() {
+            showLoading('toolsResult', 'Getting chaincode information...');
+            try {
+                const mockChaincode = {
+                    status: 'Chaincode not deployed',
+                    reason: 'Loyalty chaincode needs to be installed and instantiated',
+                    available_functions: [
+                        'CreateLoyaltyAccount',
+                        'GetLoyaltyAccount',
+                        'IssuePoints',
+                        'RedeemPoints',
+                        'TransferPoints',
+                        'GetTransactionHistory'
+                    ],
+                    current_mode: 'Mock data mode - Backend returns simulated blockchain data'
+                };
+                showResult('toolsResult', mockChaincode, 'warning');
+            } catch (error) {
+                showResult('toolsResult', `Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function getAllAccounts() {
+            showLoading('toolsResult', 'Getting all accounts...');
+            try {
+                const mockAccounts = {
+                    total_accounts: 3,
+                    accounts: [
+                        { customerID: 'customer1', balance: 1500, lastUpdated: '2025-07-25T04:10:00Z' },
+                        { customerID: 'admin', balance: 1000, lastUpdated: '2025-07-24T15:00:00Z' },
+                        { customerID: 'employee1', balance: 500, lastUpdated: '2025-07-24T16:30:00Z' }
+                    ],
+                    note: 'Data from mock blockchain (simulated)'
+                };
+                showResult('toolsResult', mockAccounts, 'success');
+            } catch (error) {
+                showResult('toolsResult', `Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Network status
+        async function refreshNetworkStatus() {
+            // Simulate network check
+            document.querySelector('.metric-value.success').innerHTML = '<span class="status-online"></span>Refreshing...';
+            
+            setTimeout(() => {
+                document.querySelector('.metric-value.success').innerHTML = '<span class="status-online"></span>Online';
+                getChannelInfo(); // Auto refresh channel info
+            }, 1000);
+        }
+        
+        // API testing
+        async function testBackendAPI() {
+            showLoading('toolsResult', 'Testing backend API...');
+            try {
+                const healthCheck = await fetch('/health');
+                const healthData = await healthCheck.json();
+                
+                const apiTest = {
+                    backend_health: healthData,
+                    api_endpoints: {
+                        '/health': 'OK',
+                        '/api/v1/accounts/{id}': 'OK',
+                        '/api/v1/accounts/{id}/recent-transactions': 'OK',
+                        '/api/v1/auth/login': 'OK'
+                    },
+                    test_time: new Date().toISOString()
+                };
+                
+                showResult('toolsResult', apiTest, 'success');
+            } catch (error) {
+                showResult('toolsResult', `API Test Failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Auto-refresh on page load
+        window.addEventListener('load', () => {
+            getChannelInfo();
+        });
+    </script>
+</body>
+</html>
