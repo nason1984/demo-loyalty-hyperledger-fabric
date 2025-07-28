@@ -1,4 +1,4 @@
-package chaincode
+package main
 
 import (
 	"encoding/json"
@@ -15,9 +15,12 @@ type SmartContract struct {
 
 // LoyaltyAccount định nghĩa cấu trúc cho một tài khoản loyalty trên sổ cái
 type LoyaltyAccount struct {
-	CustomerID  string `json:"customerID"`
-	Balance     int    `json:"balance"`
-	LastUpdated string `json:"lastUpdated"`
+	CustomerID       string `json:"customerID"`
+	Balance          int    `json:"balance"`
+	LastUpdated      string `json:"lastUpdated"`
+	LifetimeEarned   int    `json:"lifetimeEarned"`
+	LifetimeRedeemed int    `json:"lifetimeRedeemed"`
+	Status           string `json:"status"`
 }
 
 // LoyaltyTransaction định nghĩa cấu trúc cho một giao dịch loyalty
@@ -29,6 +32,31 @@ type LoyaltyTransaction struct {
 	Amount        int    `json:"amount"`
 	Timestamp     string `json:"timestamp"`
 	Description   string `json:"description"`
+}
+
+// Customer định nghĩa cấu trúc cho thông tin khách hàng
+type Customer struct {
+	CustomerID string `json:"customerID"`
+	FullName   string `json:"fullName"`
+	Email      string `json:"email"`
+	Phone      string `json:"phone"`
+	Tier       string `json:"tier"`
+	Status     string `json:"status"`
+}
+
+// Reward định nghĩa cấu trúc cho phần thưởng
+type Reward struct {
+	RewardID    string  `json:"rewardID"`
+	Name        string  `json:"name"`
+	PointsCost  int     `json:"pointsCost"`
+	CashValue   float64 `json:"cashValue"`
+	Quantity    int     `json:"quantity"`
+	Status      string  `json:"status"`
+}
+
+// GetCurrentTimestamp trả về timestamp hiện tại
+func GetCurrentTimestamp() string {
+	return time.Now().Format(time.RFC3339)
 }
 
 // =========================================================================================
@@ -521,7 +549,7 @@ func (s *SmartContract) QueryLoyaltyHistory(ctx contractapi.TransactionContextIn
 		historyItem := &HistoryQueryResult{
 			Record:    &account,
 			TxId:      historyRecord.TxId,
-			Timestamp: historyRecord.Timestamp,
+			Timestamp: historyRecord.Timestamp.AsTime(),
 			IsDelete:  historyRecord.IsDelete,
 		}
 

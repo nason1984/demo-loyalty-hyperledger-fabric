@@ -10,10 +10,14 @@ vendor/
 *.out
 backend/loyalty-api
 backend/gateway-service
+loyalty-backend/server
+server
 
 # Node.js dependencies
 frontend/node_modules
 frontend/build
+loyalty-frontend/node_modules
+loyalty-frontend/build
 
 # Environment variables
 .env
