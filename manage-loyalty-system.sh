@@ -119,8 +119,8 @@ stop_network() {
     if [ -f "scripts/start-cryptogen.sh" ]; then
         ./scripts/start-cryptogen.sh down
     else
-        print_warning "Network stop script not found, using docker-compose down"
-        docker-compose down
+        print_warning "Network stop script not found, using docker compose down"
+        docker compose down
     fi
     
     print_success "Fabric network stopped"
@@ -230,9 +230,9 @@ start_explorer() {
     cd "$EXPLORER_DIR"
     
     print_step "Starting Explorer services..."
-    docker-compose up -d
+    docker compose up -d
     
-    wait_for_service "Explorer DB" "docker exec explorerdb_1 pg_isready -U hppoc" 15 2
+    wait_for_service "Explorer DB" "docker exec explorerdb.mynetwork.com pg_isready -U hppoc" 15 2
     wait_for_service "Explorer" "curl -s http://localhost:8090 > /dev/null" 20 3
     
     print_success "Explorer started successfully"
@@ -246,7 +246,7 @@ stop_explorer() {
     print_header "STOPPING HYPERLEDGER EXPLORER"
     
     cd "$EXPLORER_DIR"
-    docker-compose down
+    docker compose down
     
     print_success "Explorer stopped"
 }
@@ -258,7 +258,7 @@ start_backend() {
     cd "$PROJECT_ROOT"
     
     print_step "Starting backend and frontend services..."
-    docker-compose up -d loyalty_backend loyalty_frontend loyalty_postgres
+    docker compose up -d loyalty_backend loyalty_frontend loyalty_postgres
     
     wait_for_service "PostgreSQL" "docker exec loyalty_postgres pg_isready -U loyalty_user" 10 2
     wait_for_service "Backend API" "curl -s http://localhost:8080/health > /dev/null" 15 3
@@ -274,7 +274,7 @@ stop_backend() {
     print_header "STOPPING LOYALTY BACKEND SERVICES"
     
     cd "$PROJECT_ROOT"
-    docker-compose down
+    docker compose down
     
     print_success "Backend services stopped"
 }
