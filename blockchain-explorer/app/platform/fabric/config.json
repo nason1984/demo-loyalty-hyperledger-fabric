@@ -1,8 +1,8 @@
 {
 	"network-configs": {
-		"test-network": {
-			"name": "Test Network",
-			"profile": "./connection-profile/test-network.json",
+		"loyalty-network": {
+			"name": "Loyalty Network",
+			"profile": "/home/ubuntu/loyalty-project/blockchain-explorer/connection-profile/loyalty-network.json",
 			"bootMode": "ALL",
 			"noOfBlocks": 0
 		}

@@ -1,16 +1,44 @@
-# Fabric generated files
-network/organizations/peerOrganizations
-network/organizations/ordererOrganizations
-network/organizations/channel-artifacts
-*.key
+# =============================================================================
+# SECURITY - CRITICAL FILES TO NEVER COMMIT
+# =============================================================================
 
-# Hyperledger Fabric certificates and crypto materials
+# Private Keys - CRITICAL SECURITY
+**/priv_sk
+**/server.key
+**/client.key
+**/*_sk
+**/*.key
+**/*-key.pem
+**/*private*
+
+# All Certificates and Crypto Materials
+**/*.pem
+**/*.crt
+**/*.csr
+**/keystore/
+**/signcerts/
+**/cacerts/
+**/tlscacerts/
+**/admincerts/
+**/msp/
+**/tls/
+
+# Fabric Generated Crypto Materials
 loyalty-network/network/organizations/
 loyalty-network/network/channel-artifacts/
 loyalty-network/network/system-genesis-block/
 loyalty-network/network/chaincode/
 loyalty-network/network/*.tar.gz
 loyalty-network/network/metadata.json
+
+# Blockchain Explorer Sensitive Data
+blockchain-explorer/wallet/
+blockchain-explorer/pgdata/
+blockchain-explorer/walletstore/
+
+# =============================================================================
+# STANDARD EXCLUDES
+# =============================================================================
 
 # Backup files
 backups/
@@ -33,10 +61,20 @@ loyalty-frontend/build
 # Environment variables
 .env
 *.env
+.env.*
 
 # IDE settings
 .vscode/
+.idea/
 
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Docker volumes
+volumes/
+data/
+
+# Logs
+*.log
+logs/
